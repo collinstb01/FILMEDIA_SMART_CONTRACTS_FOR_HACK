@@ -7,7 +7,7 @@ interface IStructs {
         // subcriber analystics
         uint256 lastPaymentTimestamp;
         bool currentlySubcribed;
-        address artist;
+        uint256 artist;
         address subcriber;
         uint256 subcribedDate;
     }
@@ -16,5 +16,6 @@ interface IStructs {
         uint256[] tokenIds; /// THIS IS THE MUSIC ID THAT WOULD BE USED TO IDENTIFY ARTIST MUSICS
         address[] allSubcribers;
         string[] nfts;
+        uint256 balance;
     }
 }

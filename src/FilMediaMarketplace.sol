@@ -26,27 +26,22 @@ pragma solidity ^0.8.18;
 
 // import {FilMediaToken} from "./FilMediaToken.sol";
 import {IERC20} from "./interface/IERC20.sol";
-import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-import {AutomationCompatible} from "@chainlink/contracts/src/v0.8/automation/AutomationCompatible.sol";
-import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/automation/AutomationCompatible.sol";
 import {IStructs} from "./interface/IStructs.sol";
 import {IERC721} from "./interface/IERC721.sol";
 
-contract FilMediaMarketplace is AutomationCompatibleInterface, IStructs {
-    AggregatorV3Interface internal dataFeed;
-
+contract FilMediaMarketplace is IStructs {
     // Constants for time calculations
     uint256 constant ONE_MONTH_SECONDS = 30 days;
     uint256 public lastTimeStamp;
     SubriberAnalytics[] isSubcribed; // addresses of user subcribed on the platform (to any artist)
-    address[] artists; // addresses of user subcribed on the platform (to any artist)
+    uint256[] artists; // addresses of user subcribed on the platform (to any artist)
     LastChecked lastChecked;
     bool private locked = false;
 
     /////// STRUCTS ////////
     struct User {
         address userAddress;
-        address[] subcribeToAddress; // this is the address he is subcribe to
+        uint256[] subcribeToTokenId; // this is the address he is subcribe to
     }
 
     struct ListMusicNFT {
@@ -60,7 +55,7 @@ contract FilMediaMarketplace is AutomationCompatibleInterface, IStructs {
         address nft;
         uint256 tokenId;
         uint256 streams;
-        address artist;
+        uint256 artistTokenId;
     }
 
     struct LastChecked {
@@ -70,44 +65,61 @@ contract FilMediaMarketplace is AutomationCompatibleInterface, IStructs {
     }
     /////////// MAPPING /////////////////
     mapping(address user => uint256) balance;
-    mapping(address => bool) anArtist;
-    mapping(address artistAddress => Artist) artist;
-    mapping(address userAddress => User) user;
-    mapping(address artist => mapping(uint256 _tokenId => ListMusicNFT))
+    mapping(uint256 => bool) anArtist;
+
+    mapping(uint256 artistTokenId => mapping(uint256 _tokenId => ListMusicNFT))
         internal _listMusicNfts;
     mapping(uint256 tokenId => Music) music;
+    mapping(uint256 tokenId => User) user;
+    mapping(uint256 artistAddress => Artist) artist;
+
     mapping(uint256 subcriberAddress => SubriberAnalytics) subribeAnalytics;
-    mapping(address user => mapping(address artist => SubriberAnalytics)) userIsSubcribedToAnalystics;
-    mapping(address user => mapping(address artist => bool))
+    mapping(uint256 user => mapping(uint256 artist => SubriberAnalytics)) userIsSubcribedToAnalystics;
+    mapping(uint256 user => mapping(uint256 artist => bool))
         public isSubscribed;
     //helps get the token id of a user
     mapping(address user => mapping(address artist => uint256)) public _tokenId;
     //helps get the month  a user is subcribed
-    mapping(uint256 year => mapping(address user => mapping(address artist => bool)))
+    mapping(uint256 year => mapping(uint256 user => mapping(uint256 artist => bool)))
         public monthlySubcriptionBool;
 
     ////////////// EVENTS /////////////////
+    event CreatedUserNFT(
+        address indexed nft,
+        uint256 indexed userTokenId,
+        address indexed user,
+        uint256 chainid
+    );
+
+    event CreatedArtistNFT(
+        address indexed nft,
+        uint256 indexed artistTokenId,
+        address indexed artist,
+        uint256 chainid
+    );
+
     event ListedMusicNFT(
         address indexed nft,
         uint256 indexed tokenId,
+        uint256 artistTokenId,
         address indexed artist,
         uint256 chainid
     );
 
     event SubcribedToArtist(
         address indexed subcriber,
-        address indexed artist,
+        uint256 indexed artist,
         uint256 chainid
     );
 
     event CanceledSubcription(
-        address indexed subcriber,
-        address indexed artist,
+        uint256 indexed subcriber,
+        uint256 indexed artist,
         uint256 chainid
     );
 
     event ArtistAddedNFTs(
-        address indexed artist,
+        uint256 indexed artist,
         string[3] indexed nfts,
         uint256 chainid
     );
@@ -127,9 +139,6 @@ contract FilMediaMarketplace is AutomationCompatibleInterface, IStructs {
      * Address: 0x0715A7794a1dc8e42615F059dD6e406A6594651A
      */
     constructor() {
-        dataFeed = AggregatorV3Interface(
-            0x0715A7794a1dc8e42615F059dD6e406A6594651A
-        );
         lastTimeStamp = block.timestamp;
     }
 
@@ -139,6 +148,35 @@ contract FilMediaMarketplace is AutomationCompatibleInterface, IStructs {
     // Fallback function is called when msg.data is not empty
     fallback() external payable {}
 
+    function createUser(address _nft, uint256 userTokenId) public {
+        // @checks
+        // check if a user exist already
+
+        user[userTokenId] = User({
+            userAddress: msg.sender,
+            subcribeToTokenId: new uint256[](0)
+        });
+
+        emit CreatedUserNFT(_nft, userTokenId, msg.sender, block.chainid);
+    }
+
+    function createArtist(address _nft, uint256 tokenId) public {
+        // @checks
+        // check if a user exist already
+        artist[tokenId] = Artist({
+            artistAddress: msg.sender,
+            tokenIds: new uint256[](0),
+            allSubcribers: new address[](0),
+            nfts: new string[](0),
+            balance: 0
+        });
+        artists.push(tokenId);
+
+        anArtist[tokenId] = true;
+
+        emit CreatedArtistNFT(_nft, tokenId, msg.sender, block.chainid);
+    }
+
     // @notice For Listing Artist music to the DB
     // @dev this adds the a user to the artist struct
     // @param no params
@@ -146,92 +184,90 @@ contract FilMediaMarketplace is AutomationCompatibleInterface, IStructs {
     function listNFT(
         address _nft,
         uint256 tokenId,
-        address _artistAddr
+        uint256 artistTokenId
     ) public {
-        Artist storage _artist = artist[_artistAddr];
+        Artist storage _artist = artist[artistTokenId];
 
         // @state changes
-        _artist.tokenIds.push(tokenId);
-        _artist.artistAddress = _artistAddr;
-        anArtist[_artistAddr] = true;
+        require(_artist.artistAddress != address(0), "You are not an artist");
+        require(anArtist[artistTokenId], "You are not an artist");
 
-        _listMusicNfts[_artistAddr][tokenId] = ListMusicNFT({
+        _artist.tokenIds.push(tokenId);
+
+        _listMusicNfts[artistTokenId][tokenId] = ListMusicNFT({
             nft: _nft,
             tokenId: tokenId,
-            artist: _artistAddr
+            artist: msg.sender
         });
 
         music[tokenId] = Music({
             nft: _nft,
             tokenId: tokenId,
             streams: 0,
-            artist: _artistAddr
+            artistTokenId: artistTokenId
         });
 
-        emit ListedMusicNFT(_nft, tokenId, _artistAddr, block.chainid);
+        emit ListedMusicNFT(
+            _nft,
+            tokenId,
+            artistTokenId,
+            msg.sender,
+            block.chainid
+        );
     }
 
     // ✅
     function addNFTForArtist(
-        address _artistAddr,
+        uint256 _artistTokenId,
         string[3] memory nfts
     ) public {
-        Artist storage artistStruct = artist[_artistAddr];
+        Artist storage artistStruct = artist[_artistTokenId];
 
         //@state changes
         for (uint i = 0; i < 3; i++) {
             artistStruct.nfts.push(nfts[i]);
         }
-        artists.push(_artistAddr);
 
-        emit ArtistAddedNFTs(_artistAddr, nfts, block.chainid);
-    }
-
-    // ✅
-    function deposit() public payable {
-        (bool success, ) = payable(address(this)).call{value: msg.value}("");
-        require(success, "Unable to send Avax");
-
-        balance[msg.sender] += msg.value;
+        emit ArtistAddedNFTs(_artistTokenId, nfts, block.chainid);
     }
 
     // @notice For Subcribing to a particular artist
     // @dev this adds the a user to the artist struct
     // @param  __artistAddr: address of artist
     // ✅
-    function subcribeToArtist(address _artistAddr) public {
-        int answer = getChainlinkDataFeedLatestAnswer();
-
-        uint256 oneUSD = 1e18 / uint256(answer);
-        uint256 balanceOfUser = balance[msg.sender];
-
-        User storage _user = user[msg.sender];
-        Artist storage _aritst = artist[_artistAddr];
+    function subcribeToArtist(
+        uint256 _artistTokenId,
+        uint256 _userTokenId,
+        uint256 tokenId
+    ) public payable {
+        User storage _user = user[tokenId];
+        Artist storage _aritst = artist[_artistTokenId];
 
         // @checks
-        require(balanceOfUser >= oneUSD, "Insufficient Balance");
-        require(!isSubscribed[msg.sender][_artistAddr], "Already subscribed");
+        require(msg.value >= 0.1 ether, "Insufficient Funds");
+        require(
+            !isSubscribed[_userTokenId][_artistTokenId],
+            "Already subscribed"
+        );
 
-        balanceOfUser -= oneUSD;
+        (bool success, ) = payable(address(this)).call{value: msg.value}("");
+        require(success, "Unable to send ether");
 
         // @state changes
         _aritst.allSubcribers.push(msg.sender);
-        _aritst.allSubcribers.push(msg.sender);
-        isSubscribed[msg.sender][_artistAddr] = true;
-        monthlySubcriptionBool[block.timestamp][msg.sender][_artistAddr] = true;
 
-        if (_user.userAddress == address(0)) {
-            _user.userAddress = msg.sender;
-            _user.subcribeToAddress.push(_artistAddr);
-        } else {
-            _user.subcribeToAddress.push(_artistAddr);
-        }
+        isSubscribed[_userTokenId][_artistTokenId] = true;
+        monthlySubcriptionBool[block.timestamp][_userTokenId][
+            _artistTokenId
+        ] = true;
 
-        userIsSubcribedToAnalystics[msg.sender][
-            _artistAddr
+        _user.subcribeToTokenId.push(_artistTokenId);
+
+        userIsSubcribedToAnalystics[_userTokenId][
+            _artistTokenId
         ] = SubriberAnalytics({
             lastPaymentTimestamp: block.timestamp,
-            artist: _artistAddr,
+            artist: _artistTokenId,
             subcriber: msg.sender,
             currentlySubcribed: true,
             subcribedDate: block.timestamp
@@ -239,118 +275,39 @@ contract FilMediaMarketplace is AutomationCompatibleInterface, IStructs {
         isSubcribed.push(
             SubriberAnalytics({
                 lastPaymentTimestamp: block.timestamp,
-                artist: _artistAddr,
+                artist: _artistTokenId,
                 subcriber: msg.sender,
                 currentlySubcribed: true,
                 subcribedDate: block.timestamp
             })
         );
-        emit SubcribedToArtist(msg.sender, _artistAddr, block.chainid);
+        emit SubcribedToArtist(msg.sender, _artistTokenId, block.chainid);
     }
 
     // ✅
-    function cancelSubcribtion(address _artistAddr) public {
+    function cancelSubcribtion(
+        uint256 _artistTokenId,
+        uint256 _userTokenId
+    ) public {
         // @DO's
         // remove the user from the artist address
         // change user currently subcrib to false
         /// after removing, VRF wont be able to deduct money
         SubriberAnalytics
             storage _currentlySubribed = userIsSubcribedToAnalystics[
-                msg.sender
-            ][_artistAddr];
+                _userTokenId
+            ][_artistTokenId];
 
         // @state changes
         _currentlySubribed.currentlySubcribed = false;
-        isSubscribed[msg.sender][_artistAddr] = false;
-        monthlySubcriptionBool[block.timestamp][msg.sender][
-            _artistAddr
+        isSubscribed[_userTokenId][_artistTokenId] = false;
+        monthlySubcriptionBool[block.timestamp][_artistTokenId][
+            _artistTokenId
         ] = false;
 
-        emit CanceledSubcription(msg.sender, _artistAddr, block.chainid);
+        emit CanceledSubcription(_userTokenId, _artistTokenId, block.chainid);
     }
 
-    function checkUpkeep(
-        bytes calldata /* checkData */
-    )
-        external
-        override
-        returns (bool upkeepNeeded, bytes memory /* performData */)
-    {
-        // loop throught the isSubcribed(all users that are subcribed);
-        // check get the user
-        // check if the time has passed to subcribed then if yes call
-        for (uint i = 0; i < isSubcribed.length; i++) {
-            address artistAddress = isSubcribed[i].artist;
-            address subcriberAddress = isSubcribed[i].subcriber;
-            SubriberAnalytics memory analystics = userIsSubcribedToAnalystics[
-                subcriberAddress
-            ][artistAddress];
-
-            //@checks
-            // check if the user is subcribed if he isnt
-            if (!analystics.currentlySubcribed) {
-                continue;
-            }
-
-            if (
-                (block.timestamp - analystics.lastPaymentTimestamp) >
-                ONE_MONTH_SECONDS
-            ) {
-                lastChecked = LastChecked({
-                    artistAddress: artistAddress,
-                    subcriberAddress: subcriberAddress,
-                    lastTimeStamp: analystics.lastPaymentTimestamp
-                });
-                upkeepNeeded = true;
-            }
-        }
-    }
-
-    function performUpkeep(bytes calldata /* performData */) external override {
-        LastChecked memory _lastChecked = lastChecked;
-
-        if (
-            (block.timestamp - _lastChecked.lastTimeStamp) > ONE_MONTH_SECONDS
-        ) {
-            address _user = _lastChecked.subcriberAddress;
-            address _artist = _lastChecked.artistAddress;
-            int answer = getChainlinkDataFeedLatestAnswer();
-
-            uint256 oneUSD = 1e18 / uint256(answer);
-
-            SubriberAnalytics
-                storage _subcribeAnalytics = userIsSubcribedToAnalystics[_user][
-                    _artist
-                ];
-
-            uint256 userBalance = balance[_user];
-
-            if (userBalance >= oneUSD) {
-                userBalance -= oneUSD;
-                _subcribeAnalytics.lastPaymentTimestamp = block.timestamp;
-                monthlySubcriptionBool[block.timestamp][_user][_artist] = true;
-            } else {
-                monthlySubcriptionBool[block.timestamp][_user][_artist] = false;
-                _subcribeAnalytics.currentlySubcribed = false;
-                isSubscribed[_user][_artist] = false;
-            }
-        }
-    }
-
-    // ✅
-    function getChainlinkDataFeedLatestAnswer() public view returns (int) {
-        // prettier-ignore
-        (
-            /* uint80 roundID */,
-            int answer,
-            /*uint startedAt*/,
-            /*uint timeStamp*/,
-            /*uint80 answeredInRound*/
-        ) = dataFeed.latestRoundData();
-        return answer;
-    }
-
-    // ✅
     function setTokenId(
         address subcriberAddress,
         address artistAddress,
@@ -368,10 +325,10 @@ contract FilMediaMarketplace is AutomationCompatibleInterface, IStructs {
 
     //////////////// GETTERS (PURE AND VIEW)/////////////////////////
     function checkIfUserIsSubcribed(
-        address subcriberAddress,
-        address artistAddress
+        uint256 subcriberTokenId,
+        uint256 artistTokenId
     ) external view returns (bool _isSubcribedBool) {
-        return isSubscribed[subcriberAddress][artistAddress];
+        return isSubscribed[artistTokenId][subcriberTokenId];
     }
 
     function getSubcribers()
@@ -382,15 +339,15 @@ contract FilMediaMarketplace is AutomationCompatibleInterface, IStructs {
         return isSubcribed;
     }
 
-    function getAllArtists() external view returns (address[] memory) {
+    function getAllArtists() external view returns (uint256[] memory) {
         return artists;
     }
 
     function getAnalytics(
-        address subcriberAddress,
-        address artistAddress
+        uint256 subcriberTokenId,
+        uint256 artistTokenId
     ) external view returns (SubriberAnalytics memory) {
-        return userIsSubcribedToAnalystics[subcriberAddress][artistAddress];
+        return userIsSubcribedToAnalystics[subcriberTokenId][artistTokenId];
     }
 
     function getTokenId(
@@ -402,9 +359,9 @@ contract FilMediaMarketplace is AutomationCompatibleInterface, IStructs {
 
     function getMusicNFT(
         uint256 tokenId,
-        address _artistAddr
+        uint256 _artistTokenId
     ) external view returns (ListMusicNFT memory) {
-        return _listMusicNfts[_artistAddr][tokenId];
+        return _listMusicNfts[_artistTokenId][tokenId];
     }
 
     function getMusic(uint256 tokenId) external view returns (Music memory) {
@@ -412,12 +369,12 @@ contract FilMediaMarketplace is AutomationCompatibleInterface, IStructs {
     }
 
     function getArtist(
-        address _artistAddr
+        uint256 _artistTokenId
     ) external view returns (Artist memory) {
-        return artist[_artistAddr];
+        return artist[_artistTokenId];
     }
 
-    function getUser(address _userAddress) external view returns (User memory) {
+    function getUser(uint256 _userAddress) external view returns (User memory) {
         return user[_userAddress];
     }
 
@@ -428,8 +385,8 @@ contract FilMediaMarketplace is AutomationCompatibleInterface, IStructs {
     }
 
     function isWalletAnArtist(
-        address artistAddress
+        uint256 artistTokenId
     ) external view returns (bool) {
-        return anArtist[artistAddress];
+        return anArtist[artistTokenId];
     }
 }
