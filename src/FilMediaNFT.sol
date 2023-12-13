@@ -33,13 +33,10 @@ contract FilMediaNFT is ERC721, ERC721URIStorage, Ownable(msg.sender) {
     uint256 private _tokenIdCounter;
 
     // The constructor sets the name and symbol of the token using the ERC721 constructor.
-    constructor() ERC721("FilMediaNFT", "FM") {}
-
-    string private uri =
-        "https://gateway.pinata.cloud/ipfs/QmaNyVaPnHkuzDepgkTFdEok4A2JbY46QxquYqtyhS93p3";
+    constructor() ERC721("Fractis", "FRAC") {}
 
     // Function to mint a new NFT. The function takes the recipient address and the token URI as parameters.
-    function mint(address to) public returns (uint256) {
+    function mint(address to, string memory uri) public returns (uint256) {
         _tokenIdCounter++;
 
         // Getting the current token ID.
