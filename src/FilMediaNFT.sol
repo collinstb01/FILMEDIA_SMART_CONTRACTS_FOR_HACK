@@ -29,17 +29,17 @@ import {ERC721URIStorage} from "@openzeppelin/contracts/token/ERC721/extensions/
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 // The contract inherits from the ERC721, ERC721URIStorage, ERC721Burnable, and Ownable contracts.
-contract FilMediaArtistNFT is ERC721, ERC721URIStorage, Ownable(msg.sender) {
+contract FilMediaNFT is ERC721, ERC721URIStorage, Ownable(msg.sender) {
     uint256 private _tokenIdCounter;
 
     // The constructor sets the name and symbol of the token using the ERC721 constructor.
-    constructor() ERC721("Fractis", "FRAC") {}
+    constructor() ERC721("FilMediaNFT", "FM") {}
 
-    mapping(address => bool) artist;
+    string private uri =
+        "https://gateway.pinata.cloud/ipfs/QmaNyVaPnHkuzDepgkTFdEok4A2JbY46QxquYqtyhS93p3";
 
     // Function to mint a new NFT. The function takes the recipient address and the token URI as parameters.
-    function mint(address to, string memory uri) public returns (uint256) {
-        require(!artist[to], "Artist with this address already exist");
+    function mint(address to) public returns (uint256) {
         _tokenIdCounter++;
 
         // Getting the current token ID.
@@ -50,7 +50,6 @@ contract FilMediaArtistNFT is ERC721, ERC721URIStorage, Ownable(msg.sender) {
         // Setting the token URI of the minted token.
         _setTokenURI(tokenId, uri);
 
-        artist[msg.sender] = true;
         // Returning the token ID of the minted token.
         return tokenId;
     }

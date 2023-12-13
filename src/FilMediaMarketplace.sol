@@ -35,6 +35,7 @@ contract FilMediaMarketplace is IStructs {
     uint256 public lastTimeStamp;
     SubriberAnalytics[] isSubcribed; // addresses of user subcribed on the platform (to any artist)
     uint256[] artists; // addresses of user subcribed on the platform (to any artist)
+    uint256[] _nfts; // addresses of user subcribed on the platform (to any artist)
     LastChecked lastChecked;
     bool private locked = false;
 
@@ -193,6 +194,7 @@ contract FilMediaMarketplace is IStructs {
         require(anArtist[artistTokenId], "You are not an artist");
 
         _artist.tokenIds.push(tokenId);
+        _nfts.push(tokenId);
 
         _listMusicNfts[artistTokenId][tokenId] = ListMusicNFT({
             nft: _nft,
