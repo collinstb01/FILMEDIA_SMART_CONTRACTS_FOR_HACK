@@ -35,7 +35,8 @@ contract FilMediaUserNFT is ERC721, ERC721URIStorage, Ownable(msg.sender) {
     // The constructor sets the name and symbol of the token using the ERC721 constructor.
     constructor() ERC721("Fractis", "FRAC") {}
 
-    string memory tokenURI = "https://gateway.pinata.cloud/ipfs/QmaNyVaPnHkuzDepgkTFdEok4A2JbY46QxquYqtyhS93p3";
+    string private uri =
+        "https://gateway.pinata.cloud/ipfs/QmaNyVaPnHkuzDepgkTFdEok4A2JbY46QxquYqtyhS93p3";
 
     // Function to mint a new NFT. The function takes the recipient address and the token URI as parameters.
     function mint(address to) public returns (uint256) {
@@ -47,7 +48,7 @@ contract FilMediaUserNFT is ERC721, ERC721URIStorage, Ownable(msg.sender) {
         // Minting the new token and assigning it to the recipient.
         _safeMint(to, tokenId);
         // Setting the token URI of the minted token.
-        _setTokenURI(tokenId, tokenURI);
+        _setTokenURI(tokenId, uri);
 
         // Returning the token ID of the minted token.
         return tokenId;

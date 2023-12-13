@@ -35,8 +35,11 @@ contract FilMediaArtistNFT is ERC721, ERC721URIStorage, Ownable(msg.sender) {
     // The constructor sets the name and symbol of the token using the ERC721 constructor.
     constructor() ERC721("Fractis", "FRAC") {}
 
+    mapping(address => bool) artist;
+
     // Function to mint a new NFT. The function takes the recipient address and the token URI as parameters.
     function mint(address to, string memory uri) public returns (uint256) {
+        require(!artist[msg.sender], "Artist with this address already exist");
         _tokenIdCounter++;
 
         // Getting the current token ID.
@@ -47,6 +50,7 @@ contract FilMediaArtistNFT is ERC721, ERC721URIStorage, Ownable(msg.sender) {
         // Setting the token URI of the minted token.
         _setTokenURI(tokenId, uri);
 
+        artist[msg.sender] = true;
         // Returning the token ID of the minted token.
         return tokenId;
     }

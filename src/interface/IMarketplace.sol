@@ -13,21 +13,21 @@ interface IMarketplace is IStructs {
     function getSubcribers() external view returns (SubriberAnalytics[] memory);
 
     function getAnalytics(
-        address subcriberAddress,
-        address artistAddress
+        uint256 subcriberTokenId,
+        uint256 artistTokenId
     ) external view returns (SubriberAnalytics memory);
 
     function getTokenId(
-        address subcriberAddress,
-        address artistAddress
+        uint256 subcriberTokenId,
+        uint256 artistTokenId
     ) external view returns (uint256);
 
     function getArtist(
-        address artistAddress
+        uint256 _artistTokenId
     ) external view returns (Artist memory);
 
     function checkIfUserIsSubcribed(
-        address subcriberAddress,
-        address artistAddress
+        uint256 subcriberTokenId,
+        uint256 artistTokenId
     ) external view returns (bool _isSubcribedBool);
 }

@@ -8,7 +8,7 @@ interface IStructs {
         uint256 lastPaymentTimestamp;
         bool currentlySubcribed;
         uint256 artist;
-        address subcriber;
+        uint256 subcriberTokenId;
         uint256 subcribedDate;
     }
     struct Artist {

@@ -47,7 +47,7 @@ contract FilMediaMarketplace is IStructs {
     struct ListMusicNFT {
         address nft;
         uint256 tokenId;
-        address artist;
+        uint256 artistTokenId;
     }
 
     // help get the number of streams
@@ -64,7 +64,7 @@ contract FilMediaMarketplace is IStructs {
         uint256 lastTimeStamp;
     }
     /////////// MAPPING /////////////////
-    mapping(address user => uint256) balance;
+    mapping(uint256 artistId => uint256) balance;
     mapping(uint256 => bool) anArtist;
 
     mapping(uint256 artistTokenId => mapping(uint256 _tokenId => ListMusicNFT))
@@ -78,7 +78,7 @@ contract FilMediaMarketplace is IStructs {
     mapping(uint256 user => mapping(uint256 artist => bool))
         public isSubscribed;
     //helps get the token id of a user
-    mapping(address user => mapping(address artist => uint256)) public _tokenId;
+    mapping(uint256 user => mapping(uint256 artist => uint256)) public _tokenId;
     //helps get the month  a user is subcribed
     mapping(uint256 year => mapping(uint256 user => mapping(uint256 artist => bool)))
         public monthlySubcriptionBool;
@@ -197,7 +197,7 @@ contract FilMediaMarketplace is IStructs {
         _listMusicNfts[artistTokenId][tokenId] = ListMusicNFT({
             nft: _nft,
             tokenId: tokenId,
-            artist: msg.sender
+            artistTokenId: artistTokenId
         });
 
         music[tokenId] = Music({
@@ -237,10 +237,9 @@ contract FilMediaMarketplace is IStructs {
     // ✅
     function subcribeToArtist(
         uint256 _artistTokenId,
-        uint256 _userTokenId,
-        uint256 tokenId
+        uint256 _userTokenId
     ) public payable {
-        User storage _user = user[tokenId];
+        User storage _user = user[_userTokenId];
         Artist storage _aritst = artist[_artistTokenId];
 
         // @checks
@@ -268,7 +267,7 @@ contract FilMediaMarketplace is IStructs {
         ] = SubriberAnalytics({
             lastPaymentTimestamp: block.timestamp,
             artist: _artistTokenId,
-            subcriber: msg.sender,
+            subcriberTokenId: _userTokenId,
             currentlySubcribed: true,
             subcribedDate: block.timestamp
         });
@@ -276,7 +275,7 @@ contract FilMediaMarketplace is IStructs {
             SubriberAnalytics({
                 lastPaymentTimestamp: block.timestamp,
                 artist: _artistTokenId,
-                subcriber: msg.sender,
+                subcriberTokenId: _userTokenId,
                 currentlySubcribed: true,
                 subcribedDate: block.timestamp
             })
@@ -309,18 +308,18 @@ contract FilMediaMarketplace is IStructs {
     }
 
     function setTokenId(
-        address subcriberAddress,
-        address artistAddress,
+        uint256 subcriberTokenId,
+        uint256 artistTokenId,
         uint256 tokenId,
         address _nftAddress
     ) external {
         // some important chekcs here
         // check if the caller is the owner of the NFT
         require(
-            IERC721(_nftAddress).ownerOf(tokenId) == subcriberAddress,
+            IERC721(_nftAddress).ownerOf(tokenId) == msg.sender,
             "You are not owner, cant set token id"
         );
-        _tokenId[subcriberAddress][artistAddress] = tokenId;
+        _tokenId[subcriberTokenId][artistTokenId] = tokenId;
     }
 
     //////////////// GETTERS (PURE AND VIEW)/////////////////////////
@@ -351,10 +350,10 @@ contract FilMediaMarketplace is IStructs {
     }
 
     function getTokenId(
-        address subcriberAddress,
-        address artistAddress
+        uint256 subcriberTokenId,
+        uint256 artistTokenId
     ) external view returns (uint256) {
-        return _tokenId[subcriberAddress][artistAddress];
+        return _tokenId[subcriberTokenId][artistTokenId];
     }
 
     function getMusicNFT(
@@ -374,14 +373,12 @@ contract FilMediaMarketplace is IStructs {
         return artist[_artistTokenId];
     }
 
-    function getUser(uint256 _userAddress) external view returns (User memory) {
-        return user[_userAddress];
+    function getUser(uint256 _userTokenId) external view returns (User memory) {
+        return user[_userTokenId];
     }
 
-    function getUserBalance(
-        address _userAddress
-    ) external view returns (uint256) {
-        return balance[_userAddress];
+    function getUserBalance(uint256 artistId) external view returns (uint256) {
+        return balance[artistId];
     }
 
     function isWalletAnArtist(

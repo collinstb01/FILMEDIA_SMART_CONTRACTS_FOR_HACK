@@ -43,18 +43,18 @@ contract FilMediaDynamicNFT is ERC721Enumerable, ERC721URIStorage, IStructs {
     }
 
     // ✅
-    function safeMint(address artistAddress) public {
+    function safeMint(uint256 artistTokenId, uint256 userTokenId) public {
         //@checks
         // check if a user is subcribed
         // check if a user has minted for a particular artist
         bool isSubcribed = _iMarketplace.checkIfUserIsSubcribed(
-            msg.sender,
-            artistAddress
+            userTokenId,
+            artistTokenId
         );
         // @checks
         require(isSubcribed, "You are not subcribed");
 
-        Artist memory artistStruct = _iMarketplace.getArtist(artistAddress);
+        Artist memory artistStruct = _iMarketplace.getArtist(artistTokenId);
 
         _nextTokenId++;
         _safeMint(msg.sender, _nextTokenId);
@@ -70,18 +70,18 @@ contract FilMediaDynamicNFT is ERC721Enumerable, ERC721URIStorage, IStructs {
         SubriberAnalytics[] memory isSubcribed = _iMarketplace.getSubcribers();
 
         for (uint i = 0; i < isSubcribed.length; i++) {
-            address artistAddress = isSubcribed[i].artist;
-            address subcriberAddress = isSubcribed[i].subcriber;
+            uint256 artistTokenId = isSubcribed[i].artist;
+            uint256 subcriberTokenId = isSubcribed[i].subcriberTokenId;
 
-            Artist memory artistStruct = _iMarketplace.getArtist(artistAddress);
+            Artist memory artistStruct = _iMarketplace.getArtist(artistTokenId);
 
             SubriberAnalytics memory analystics = _iMarketplace.getAnalytics(
-                subcriberAddress,
-                artistAddress
+                subcriberTokenId,
+                artistTokenId
             );
             uint256 tokenId = _iMarketplace.getTokenId(
-                subcriberAddress,
-                artistAddress
+                subcriberTokenId,
+                artistTokenId
             );
 
             string memory newImageURI;
