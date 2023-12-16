@@ -65,8 +65,9 @@ contract FilMediaMarketplace is IStructs {
         uint256 lastTimeStamp;
     }
     /////////// MAPPING /////////////////
-    mapping(uint256 artistId => uint256) balance;
+    mapping(uint256 artistId => uint256) balance; /// encrypted balance
     mapping(uint256 => bool) anArtist;
+    mapping(address => uint256) helperToGetTokenId; // this helps get artist or subcribers token id easily, since artist is an NFT and the token id is what gives their profile
 
     mapping(uint256 artistTokenId => mapping(uint256 _tokenId => ListMusicNFT))
         internal _listMusicNfts;
@@ -158,6 +159,8 @@ contract FilMediaMarketplace is IStructs {
             subcribeToTokenId: new uint256[](0)
         });
 
+        helperToGetTokenId[msg.sender] = userTokenId;
+        // add user to table user
         emit CreatedUserNFT(_nft, userTokenId, msg.sender, block.chainid);
     }
 
@@ -172,15 +175,18 @@ contract FilMediaMarketplace is IStructs {
             balance: 0
         });
         artists.push(tokenId);
+        helperToGetTokenId[msg.sender] = tokenId;
 
         anArtist[tokenId] = true;
+
+        // add user to table artist
 
         emit CreatedArtistNFT(_nft, tokenId, msg.sender, block.chainid);
     }
 
-    // @notice For Listing Artist music to the DB
+    // @notice For Listing Artist music or video NFT to the DB
     // @dev this adds the a user to the artist struct
-    // @param no params
+    // @param  _ft= The Nft address, tokenId=The NFt tokenid
     // ✅
     function listNFT(
         address _nft,
@@ -209,6 +215,8 @@ contract FilMediaMarketplace is IStructs {
             artistTokenId: artistTokenId
         });
 
+        // add user to table nfts
+
         emit ListedMusicNFT(
             _nft,
             tokenId,
@@ -229,6 +237,8 @@ contract FilMediaMarketplace is IStructs {
         for (uint i = 0; i < 3; i++) {
             artistStruct.nfts.push(nfts[i]);
         }
+
+        // add user to table dynamic nfts
 
         emit ArtistAddedNFTs(_artistTokenId, nfts, block.chainid);
     }
@@ -387,5 +397,11 @@ contract FilMediaMarketplace is IStructs {
         uint256 artistTokenId
     ) external view returns (bool) {
         return anArtist[artistTokenId];
+    }
+
+    function getUserOrArtistTokenId(
+        address addressUserOrArtist
+    ) external view returns (uint256) {
+        return helperToGetTokenId[addressUserOrArtist];
     }
 }
