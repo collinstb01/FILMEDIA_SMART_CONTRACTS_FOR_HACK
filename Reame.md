@@ -1,1 +1,0 @@
-The contract, named "FilMediaMarketplace," facilitates a subscription-based marketplace for artists and users, allowing users to subscribe to artists, list music NFTs, and manage interactions between users and artists. The contract maintains user and artist profiles, handles subscriptions, and tracks various analytics related to subscriptions and NFTs.

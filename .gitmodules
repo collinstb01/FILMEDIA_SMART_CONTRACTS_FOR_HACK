@@ -1,0 +1,6 @@
+[submodule "lib/fhevm"]
+	path = lib/fhevm
+	url = https://github.com/zama-ai/fhevm
+[submodule "lib/evm-tableland"]
+	path = lib/evm-tableland
+	url = https://github.com/tablelandnetwork/evm-tableland

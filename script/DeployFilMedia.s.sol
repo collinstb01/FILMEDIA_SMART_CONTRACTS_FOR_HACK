@@ -1,19 +1,19 @@
-// SPDX-License-Identifier: MIT
+// // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.18;
+// pragma solidity ^0.8.18;
 
-import {Script} from "forge-std/Script.sol";
-import {FilMediaMarketplace} from "../src/FilMediaMarketplace.sol";
+// import {Script} from "forge-std/Script.sol";
+// import {FilMediaMarketplace} from "../src/FilMediaMarketplace.sol";
 
-contract DeployFilMediaMarketplace is Script {
-    constructor() {}
+// contract DeployFilMediaMarketplace is Script {
+//     constructor() {}
 
-    FilMediaMarketplace _filMediaMarketplace;
+//     FilMediaMarketplace _filMediaMarketplace;
 
-    function run() external returns (FilMediaMarketplace smdxaddr) {
-        vm.startBroadcast();
-        _filMediaMarketplace = new FilMediaMarketplace();
-        vm.stopBroadcast();
-        return _filMediaMarketplace;
-    }
-}
+//     function run() external returns (FilMediaMarketplace smdxaddr) {
+//         vm.startBroadcast();
+//         _filMediaMarketplace = new FilMediaMarketplace();
+//         vm.stopBroadcast();
+//         return _filMediaMarketplace;
+//     }
+// }

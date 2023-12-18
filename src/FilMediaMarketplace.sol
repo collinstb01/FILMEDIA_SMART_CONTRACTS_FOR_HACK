@@ -20,14 +20,20 @@
 // internal & private view & pure functions
 // external & public view & pure functions
 
-// SPDX-License-Identifier: GPL-2.0-or-later
+// SPDX-License-Identifier: Unlicense
+pragma solidity >=0.8.11 <0.9.0;
 
-pragma solidity ^0.8.18;
-
-// import {FilMediaToken} from "./FilMediaToken.sol";
+// import "@tableland/evm/contracts/ITablelandTables.sol";
+// import "@tableland/evm/contracts/ITablelandController.sol";
+import "@tableland/evm/contracts/utils/TablelandDeployments.sol";
+import "@tableland/evm/contracts/utils/SQLHelpers.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 import {IERC20} from "./interface/IERC20.sol";
 import {IStructs} from "./interface/IStructs.sol";
 import {IERC721} from "./interface/IERC721.sol";
+import {TFHE} from "fhevm/lib/TFHE.sol";
 
 contract FilMediaMarketplace is IStructs {
     // Constants for time calculations
@@ -38,6 +44,11 @@ contract FilMediaMarketplace is IStructs {
     uint256[] _nfts; // addresses of user subcribed on the platform (to any artist)
     LastChecked lastChecked;
     bool private locked = false;
+    string private constant USER_TABLE_ID = 667;
+    string _artistTableId;
+    string _musicTableId;
+
+    string private constant USER_PREFIX = "filmedia_startup_users";
 
     /////// STRUCTS ////////
     struct User {
@@ -68,6 +79,7 @@ contract FilMediaMarketplace is IStructs {
     mapping(uint256 artistId => uint256) balance; /// encrypted balance
     mapping(uint256 => bool) anArtist;
     mapping(address => uint256) helperToGetTokenId; // this helps get artist or subcribers token id easily, since artist is an NFT and the token id is what gives their profile
+    mapping(string => uint256) public tables;
 
     mapping(uint256 artistTokenId => mapping(uint256 _tokenId => ListMusicNFT))
         internal _listMusicNfts;
@@ -160,6 +172,25 @@ contract FilMediaMarketplace is IStructs {
         });
 
         helperToGetTokenId[msg.sender] = userTokenId;
+
+        TablelandDeployments.get().mutate(
+            address(this),
+            USER_TABLE_ID,
+            SQLHelpers.toInsert(
+                USER_PREFIX,
+                USER_TABLE_ID,
+                "user_token_id,nft_address,user_address,chainid",
+                string.concat(
+                    Strings.toString(userTokenId),
+                    ",",
+                    SQLHelpers.quote(Strings.toHexString(_nft)),
+                    ",",
+                    SQLHelpers.quote(Strings.toHexString(msg.sender)),
+                    ",",
+                    String.toString(block.chainid)
+                )
+            )
+        );
         // add user to table user
         emit CreatedUserNFT(_nft, userTokenId, msg.sender, block.chainid);
     }
