@@ -220,13 +220,13 @@ contract FilMediaMarketplace is IStructs {
             SQLHelpers.toInsert(
                 ARTIST_PREFIX,
                 ARTIST_TABLE_ID,
-                "user_token_id,nft_address,user_address,chainid",
+                "artist_token_id,artist_address,nft_address,chainid",
                 string.concat(
-                    Strings.toString(userTokenId),
-                    ",",
-                    SQLHelpers.quote(Strings.toHexString(_nft)),
+                    Strings.toString(tokenId),
                     ",",
                     SQLHelpers.quote(Strings.toHexString(msg.sender)),
+                    ",",
+                    SQLHelpers.quote(Strings.toHexString(_nft)),
                     ",",
                     String.toString(block.chainid)
                 )
@@ -273,9 +273,9 @@ contract FilMediaMarketplace is IStructs {
             SQLHelpers.toInsert(
                 NFTS_PREFIX,
                 NFTS_TABLE_ID,
-                "user_token_id,nft_address,user_address,chainid",
+                "nft_token_id,nft_address,artist_address,chainid",
                 string.concat(
-                    Strings.toString(userTokenId),
+                    Strings.toString(artistTokenId),
                     ",",
                     SQLHelpers.quote(Strings.toHexString(_nft)),
                     ",",
@@ -315,13 +315,17 @@ contract FilMediaMarketplace is IStructs {
             SQLHelpers.toInsert(
                 ARTIST_NFTs_PREFIX,
                 ARTIST_NFTs_TABLE_ID,
-                "user_token_id,nft_address,user_address,chainid",
+                "artist_token_id,artist_address,first_nft,second_nft,third_nft,chainid",
                 string.concat(
                     Strings.toString(userTokenId),
                     ",",
-                    SQLHelpers.quote(Strings.toHexString(_nft)),
-                    ",",
                     SQLHelpers.quote(Strings.toHexString(msg.sender)),
+                    ",",
+                    SQLHelpers.quote(nfts[0]),
+                    ",",
+                    SQLHelpers.quote(nfts[1]),
+                    ",",
+                    SQLHelpers.quote(nfts[2]),
                     ",",
                     String.toString(block.chainid)
                 )
