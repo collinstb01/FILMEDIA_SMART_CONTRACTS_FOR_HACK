@@ -21,19 +21,11 @@
 // external & public view & pure functions
 
 // SPDX-License-Identifier: Unlicense
-pragma solidity >=0.8.11 <0.9.0;
+pragma solidity ^0.8.20;
 
-// import "@tableland/evm/contracts/ITablelandTables.sol";
-// import "@tableland/evm/contracts/ITablelandController.sol";
-import "@tableland/evm/contracts/utils/TablelandDeployments.sol";
-import "@tableland/evm/contracts/utils/SQLHelpers.sol";
-import "@openzeppelin/contracts/utils/Strings.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 import {IERC20} from "./interface/IERC20.sol";
 import {IStructs} from "./interface/IStructs.sol";
 import {IERC721} from "./interface/IERC721.sol";
-import {TFHE} from "fhevm/lib/TFHE.sol";
 
 contract FilMediaMarketplace is IStructs {
     // Constants for time calculations
@@ -44,16 +36,6 @@ contract FilMediaMarketplace is IStructs {
     uint256[] _nfts; // addresses of user subcribed on the platform (to any artist)
     LastChecked lastChecked;
     bool private locked = false;
-    string private constant USER_TABLE_ID = 667;
-    string private constant ARTIST_TABLE_ID = 666;
-    string private constant NFTS_TABLE_ID = 669;
-    string private constant ARTIST_NFTs_TABLE_ID = 665;
-
-    string private constant USER_PREFIX = "filmedia_startup_users";
-    string private constant ARTIST_PREFIX = "filmedia_startup_artists";
-    string private constant NFTS_PREFIX = "filmedia_startup_nfts";
-    string private constant ARTIST_NFTs_PREFIX = "filmedia_startup_artist_nfts";
-
     /////// STRUCTS ////////
     struct User {
         address userAddress;
@@ -177,25 +159,6 @@ contract FilMediaMarketplace is IStructs {
 
         helperToGetTokenId[msg.sender] = userTokenId;
 
-        TablelandDeployments.get().mutate(
-            address(this),
-            USER_TABLE_ID,
-            SQLHelpers.toInsert(
-                USER_PREFIX,
-                USER_TABLE_ID,
-                "user_token_id,nft_address,user_address,chainid",
-                string.concat(
-                    Strings.toString(userTokenId),
-                    ",",
-                    SQLHelpers.quote(Strings.toHexString(_nft)),
-                    ",",
-                    SQLHelpers.quote(Strings.toHexString(msg.sender)),
-                    ",",
-                    String.toString(block.chainid)
-                )
-            )
-        );
-        // add user to table user
         emit CreatedUserNFT(_nft, userTokenId, msg.sender, block.chainid);
     }
 
@@ -213,26 +176,6 @@ contract FilMediaMarketplace is IStructs {
         helperToGetTokenId[msg.sender] = tokenId;
 
         anArtist[tokenId] = true;
-
-        TablelandDeployments.get().mutate(
-            address(this),
-            ARTIST_TABLE_ID,
-            SQLHelpers.toInsert(
-                ARTIST_PREFIX,
-                ARTIST_TABLE_ID,
-                "artist_token_id,artist_address,nft_address,chainid",
-                string.concat(
-                    Strings.toString(tokenId),
-                    ",",
-                    SQLHelpers.quote(Strings.toHexString(msg.sender)),
-                    ",",
-                    SQLHelpers.quote(Strings.toHexString(_nft)),
-                    ",",
-                    String.toString(block.chainid)
-                )
-            )
-        );
-        // add user to table artist
 
         emit CreatedArtistNFT(_nft, tokenId, msg.sender, block.chainid);
     }
@@ -267,25 +210,6 @@ contract FilMediaMarketplace is IStructs {
             streams: 0,
             artistTokenId: artistTokenId
         });
-        TablelandDeployments.get().mutate(
-            address(this),
-            NFTS_TABLE_ID,
-            SQLHelpers.toInsert(
-                NFTS_PREFIX,
-                NFTS_TABLE_ID,
-                "nft_token_id,nft_address,artist_address,chainid",
-                string.concat(
-                    Strings.toString(artistTokenId),
-                    ",",
-                    SQLHelpers.quote(Strings.toHexString(_nft)),
-                    ",",
-                    SQLHelpers.quote(Strings.toHexString(msg.sender)),
-                    ",",
-                    String.toString(block.chainid)
-                )
-            )
-        );
-        // add user to table nfts
 
         emit ListedMusicNFT(
             _nft,
@@ -307,30 +231,6 @@ contract FilMediaMarketplace is IStructs {
         for (uint i = 0; i < 3; i++) {
             artistStruct.nfts.push(nfts[i]);
         }
-
-        // add user to table dynamic nfts
-        TablelandDeployments.get().mutate(
-            address(this),
-            ARTIST_NFTs_TABLE_ID,
-            SQLHelpers.toInsert(
-                ARTIST_NFTs_PREFIX,
-                ARTIST_NFTs_TABLE_ID,
-                "artist_token_id,artist_address,first_nft,second_nft,third_nft,chainid",
-                string.concat(
-                    Strings.toString(userTokenId),
-                    ",",
-                    SQLHelpers.quote(Strings.toHexString(msg.sender)),
-                    ",",
-                    SQLHelpers.quote(nfts[0]),
-                    ",",
-                    SQLHelpers.quote(nfts[1]),
-                    ",",
-                    SQLHelpers.quote(nfts[2]),
-                    ",",
-                    String.toString(block.chainid)
-                )
-            )
-        );
 
         emit ArtistAddedNFTs(_artistTokenId, nfts, block.chainid);
     }
